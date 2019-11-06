@@ -12,8 +12,10 @@ app.use(cors());
 let locations = {};
 // Route Definitions
 app.get('/weather', weatherHandler);
-
 app.get('/location', locationHandler);
+app.get('/trail', trailHandler);
+app.use('*', notFoundHandler);
+app.use(errorHandler);
 function locationHandler(request, response){
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODE_API_KEY}`;
 
@@ -44,9 +46,26 @@ function weatherHandler(request, response){
       response.status(200).json(weatherSummaries);
     })
     .catch( () => {
-      errorHandler('Sorry, somthing went wrong. ', Request, response);
+      errorHandler('Sorry, something went wrong. ', Request, response);
     });
 }
+
+function trailHandler(request, response) {
+  const url = `https://hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&key=${process.env.TRAILS_API_KEY}`;
+
+  superagent.get(url)
+    .then(data => {
+      const trailSummaries = data.trails.map(location => {
+        console.log(data);
+        return new Trail(trailSummaries);
+      });
+      response.status(200).json(trailSummaries);
+    })
+    .catch(() => {
+      errorHandler('Sorry, You broke it. ', Request, response);
+    });
+}
+
 
 function Location(city,geoData){
   this.request_query = city;
@@ -60,7 +79,17 @@ function Weather(day){
   this.time = new Date(day.time * 1000).toString().slice(0, 15);
 }
 
-function errorHandler(error, request,response) {
+function Trail(location) {
+  this.name = location.name;
+  this.location = location.location;
+
+}
+
+function notFoundHandler(request, response) {
+  response.status(404).send('huh?');
+}
+
+function errorHandler(error, request, response) {
   response.status(500).send(error);
 }
 
